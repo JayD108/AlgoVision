@@ -2,7 +2,7 @@
    AlgoVision — DAA Interactive Dashboard — app.js  v3.0
    ============================================================ */
 
-const API = 'http://localhost:8080';
+const API = 'https://algovision-3xi3.onrender.com';
 
 /* ── Algorithm metadata (for topbar + info modal) ─────────────────── */
 const ALGO_INFO = {
