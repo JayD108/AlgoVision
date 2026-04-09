@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AlgoVision — DAA Interactive Dashboard</title>
+  <meta name="description" content="Interactive visualizations for DAA algorithms — Huffman Coding, Stock DP, TSP, N-Queens, Knapsack, Tower of Hanoi." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ══ SIDEBAR ══ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">⚡</div>
+      <h1>AlgoVision</h1>
+      <p>DAA Algorithm Visualizer</p>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Greedy</div>
+      <div class="nav-item active" data-view="huffman" role="button" tabindex="0" id="nav-huffman">
+        <span class="nav-icon">🗜️</span>
+        <span>Huffman Coding</span>
+        <span class="nav-tag tag-greedy">Greedy</span>
+      </div>
+
+      <div class="nav-section-label">Dynamic Programming</div>
+      <div class="nav-item" data-view="stock" role="button" tabindex="0" id="nav-stock">
+        <span class="nav-icon">📈</span>
+        <span>Stock Profit</span>
+        <span class="nav-tag tag-dp">DP</span>
+      </div>
+      <div class="nav-item" data-view="knapsack" role="button" tabindex="0" id="nav-knapsack">
+        <span class="nav-icon">🎒</span>
+        <span>0/1 Knapsack</span>
+        <span class="nav-tag tag-dp">DP</span>
+      </div>
+
+      <div class="nav-section-label">NP-Hard / Optimization</div>
+      <div class="nav-item" data-view="tsp" role="button" tabindex="0" id="nav-tsp">
+        <span class="nav-icon">🗺️</span>
+        <span>TSP Solver</span>
+        <span class="nav-tag tag-np">NP-Hard</span>
+      </div>
+
+      <div class="nav-section-label">Backtracking</div>
+      <div class="nav-item" data-view="nqueens" role="button" tabindex="0" id="nav-nqueens">
+        <span class="nav-icon">♛</span>
+        <span>N-Queens</span>
+        <span class="nav-tag tag-bt">Backtrack</span>
+      </div>
+
+      <div class="nav-section-label">Recursion</div>
+      <div class="nav-item" data-view="hanoi" role="button" tabindex="0" id="nav-hanoi">
+        <span class="nav-icon">🗼</span>
+        <span>Tower of Hanoi</span>
+        <span class="nav-tag tag-rec">Recursion</span>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      Backend: <span id="api-status" style="color:#f87171">Connecting…</span>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN ══ -->
+  <div class="main">
+
+    <div class="topbar">
+      <div class="topbar-left">
+        <span class="topbar-title" id="topbar-title">Huffman Coding</span>
+        <span class="topbar-sub"   id="topbar-sub">— Greedy compression algorithm</span>
+        <span class="topbar-badge tag-greedy" id="topbar-badge">Greedy</span>
+      </div>
+      <button class="info-btn" id="info-btn" title="Learn about this algorithm">ℹ Info</button>
+    </div>
+
+    <div class="content-area" id="content-area">
+
+      <!-- ══ VIEW: HUFFMAN ══ -->
+      <div id="view-huffman" class="view fade-in">
+        <div class="two-col">
+          <div>
+            <div class="card">
+              <div class="card-title">Input</div>
+              <div class="form-row">
+                <label>Text to Compress</label>
+                <textarea id="huf-text" placeholder="Type or paste any text…">the quick brown fox jumps over the lazy dog</textarea>
+              </div>
+              <div class="btn-row">
+                <button class="btn btn-primary" id="huf-compress-btn">🗜️ Compress</button>
+                <button class="btn btn-ghost"   id="huf-clear-btn">Clear</button>
+              </div>
+            </div>
+
+            <div class="three-col" id="huf-stats" style="display:none;margin-top:16px;">
+              <div class="stat-box">
+                <div class="stat-label">Original</div>
+                <div class="stat-value" id="huf-orig-bits">—</div>
+                <div class="stat-sub">bits (8×chars)</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">Compressed</div>
+                <div class="stat-value" id="huf-comp-bits">—</div>
+                <div class="stat-sub">bits</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">Space Saved</div>
+                <div class="stat-value" style="color:var(--green)" id="huf-ratio">—</div>
+                <div class="stat-sub">%</div>
+              </div>
+            </div>
+
+            <div class="card" id="huf-encoded-card" style="display:none;margin-top:16px;">
+              <div class="card-title">Encoded Binary (preview)</div>
+              <div class="code-block" id="huf-encoded"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="card" id="huf-table-card" style="display:none;">
+              <div class="card-title">Prefix Code Table</div>
+              <table class="data-table">
+                <thead><tr><th>Char</th><th>Freq</th><th>Code</th><th>Bits</th></tr></thead>
+                <tbody id="huf-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ VIEW: STOCK ══ -->
+      <div id="view-stock" class="view fade-in" style="display:none;">
+        <div class="two-col">
+          <div>
+            <div class="card">
+              <div class="card-title">Parameters</div>
+              <div class="form-row">
+                <label>Stock Prices (comma-separated integers)</label>
+                <input type="text" id="stock-prices" value="3,5,0,7,1,9,2,8,4,6" />
+              </div>
+              <div class="form-row">
+                <label>Max Transactions K</label>
+                <input type="number" id="stock-k" value="3" min="1" max="50" style="max-width:120px;" />
+              </div>
+              <div class="btn-row">
+                <button class="btn btn-primary" id="stock-solve-btn">📈 Find Max Profit</button>
+              </div>
+            </div>
+            <canvas class="stock-chart" id="stock-chart"></canvas>
+          </div>
+          <div>
+            <div class="card">
+              <div class="stat-box" style="margin-bottom:16px;">
+                <div class="stat-label">Maximum Profit</div>
+                <div class="stat-value" style="color:var(--green)" id="stock-profit">—</div>
+                <div class="stat-sub">with at most K transactions</div>
+              </div>
+              <div class="card-title">Transactions</div>
+              <table class="data-table">
+                <thead><tr><th>#</th><th>Buy Day</th><th>Sell Day</th><th>Buy $</th><th>Sell $</th><th>Profit</th></tr></thead>
+                <tbody id="stock-tbody"></tbody>
+              </table>
+              <div class="result-banner" id="stock-banner"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ VIEW: KNAPSACK ══ -->
+      <div id="view-knapsack" class="view fade-in" style="display:none;">
+        <div class="two-col">
+          <div>
+            <div class="card">
+              <div class="card-title">Items &amp; Capacity</div>
+              <div class="form-row">
+                <label>Weights (comma-separated)</label>
+                <input type="text" id="ks-weights" value="2,3,4,5,9" />
+              </div>
+              <div class="form-row">
+                <label>Values (comma-separated)</label>
+                <input type="text" id="ks-values" value="3,4,5,6,10" />
+              </div>
+              <div class="form-row">
+                <label>Knapsack Capacity</label>
+                <input type="number" id="ks-capacity" value="10" min="1" max="200" style="max-width:120px;" />
+              </div>
+              <div class="btn-row">
+                <button class="btn btn-primary" id="ks-solve-btn">🎒 Solve Knapsack</button>
+              </div>
+            </div>
+
+            <div class="three-col" id="ks-stats" style="display:none;margin-top:16px;">
+              <div class="stat-box">
+                <div class="stat-label">Max Value</div>
+                <div class="stat-value" style="color:var(--green)" id="ks-value">—</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">Weight Used</div>
+                <div class="stat-value" id="ks-weight">—</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">Items Taken</div>
+                <div class="stat-value" id="ks-count">—</div>
+              </div>
+            </div>
+
+            <div class="card" id="ks-items-card" style="display:none;margin-top:16px;">
+              <div class="card-title">Item Selection</div>
+              <table class="data-table">
+                <thead><tr><th>Item</th><th>Weight</th><th>Value</th><th>Selected?</th></tr></thead>
+                <tbody id="ks-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <div class="card-title">DP Table (animating capacity 0 → W)</div>
+              <div id="ks-table-container" style="overflow-x:auto;min-height:200px;">
+                <div id="ks-table-placeholder" style="color:var(--text3);font-size:13px;padding:20px;">Solve to see the DP table fill up…</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ VIEW: TSP ══ -->
+      <div id="view-tsp" class="view fade-in" style="display:none;">
+        <div class="card" style="padding-bottom:14px;">
+          <div class="card-title">Place Cities by Clicking · OR type coordinates below · Max 15</div>
+          <canvas id="tsp-canvas"></canvas>
+
+          <div style="margin-top:12px;padding:14px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border2);">
+            <label style="margin-bottom:8px;">📍 Custom Coordinates <span style="font-weight:400;color:var(--text3);text-transform:none;letter-spacing:0;">(format: <code style="color:var(--cyan)">x,y; x,y; x,y</code> — values 0-800 for x, 0-420 for y)</span></label>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <input type="text" id="tsp-coord-input" placeholder="e.g. 100,200; 350,80; 600,310; 200,380" style="flex:1;" />
+              <button class="btn btn-ghost" id="tsp-parse-btn" style="flex-shrink:0;">📍 Add Points</button>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-primary" id="tsp-solve-btn">🗺️ Solve TSP (Held-Karp)</button>
+            <button class="btn btn-ghost"   id="tsp-clear-btn">🗑️ Clear All Cities</button>
+          </div>
+        </div>
+
+        <div class="three-col">
+          <div class="stat-box">
+            <div class="stat-label">Cities Placed</div>
+            <div class="stat-value" id="tsp-city-count">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Tour Distance</div>
+            <div class="stat-value" id="tsp-dist">—</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Method</div>
+            <div class="stat-value" style="font-size:13px;" id="tsp-method">—</div>
+          </div>
+        </div>
+        <div class="result-banner" id="tsp-banner"></div>
+      </div>
+
+      <!-- ══ VIEW: N-QUEENS ══ -->
+      <div id="view-nqueens" class="view fade-in" style="display:none;">
+        <div class="two-col">
+          <div>
+            <div class="card">
+              <div class="card-title">Configuration</div>
+              <div class="form-row">
+                <label>Board Size N (1–12)</label>
+                <input type="number" id="nq-n" value="8" min="1" max="12" style="max-width:110px;" />
+              </div>
+              <div class="form-row">
+                <label>Custom Placement — column index per row (space-separated)</label>
+                <input type="text" id="nq-custom" placeholder="e.g. 0 4 7 5 2 6 1 3  (for N=8)" />
+                <button class="btn btn-ghost" id="nq-verify-btn" style="margin-top:8px;">✓ Verify Placement</button>
+              </div>
+              <div class="btn-row">
+                <button class="btn btn-primary" id="nq-solve-btn">♛ Solve N-Queens</button>
+                <button class="btn btn-ghost"   id="nq-prev-btn">← Prev</button>
+                <button class="btn btn-ghost"   id="nq-next-btn">Next →</button>
+              </div>
+              <div class="result-banner" id="nq-banner"></div>
+            </div>
+
+            <div class="three-col" style="margin-top:16px;">
+              <div class="stat-box">
+                <div class="stat-label">Board Size</div>
+                <div class="stat-value" id="nq-size-stat">—</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">Total Solutions</div>
+                <div class="stat-value" style="color:var(--green)" id="nq-total">—</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">Viewing</div>
+                <div class="stat-value" id="nq-viewing">—</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="card">
+              <div class="card-title">Board Visualization</div>
+              <div id="nq-board-container" style="display:flex;justify-content:center;align-items:flex-start;min-height:300px;padding:10px 0;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ VIEW: TOWER OF HANOI ══ -->
+      <div id="view-hanoi" class="view fade-in" style="display:none;">
+        <div class="two-col">
+          <div>
+            <div class="card">
+              <div class="card-title">Configuration</div>
+              <div class="form-row">
+                <label>Number of Disks (1–10)</label>
+                <input type="number" id="hanoi-n" value="4" min="1" max="10" style="max-width:110px;" />
+              </div>
+              <div class="form-row">
+                <label>Animation Speed</label>
+                <select id="hanoi-speed" style="max-width:160px;">
+                  <option value="800">Slow</option>
+                  <option value="400" selected>Normal</option>
+                  <option value="150">Fast</option>
+                  <option value="40">Blazing</option>
+                </select>
+              </div>
+              <div class="btn-row">
+                <button class="btn btn-primary" id="hanoi-solve-btn">🗼 Solve &amp; Animate</button>
+                <button class="btn btn-ghost"   id="hanoi-reset-btn">↺ Reset</button>
+              </div>
+              <div class="result-banner" id="hanoi-banner"></div>
+            </div>
+
+            <div class="three-col" style="margin-top:16px;">
+              <div class="stat-box">
+                <div class="stat-label">Disks</div>
+                <div class="stat-value" id="hanoi-disks-stat">—</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">Total Moves</div>
+                <div class="stat-value" style="color:var(--amber)" id="hanoi-total">—</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">Move #</div>
+                <div class="stat-value" id="hanoi-current">—</div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top:16px;" id="hanoi-log-card">
+              <div class="card-title">Move Log</div>
+              <div id="hanoi-log" style="max-height:240px;overflow-y:auto;font-family:var(--font-mono);font-size:12px;color:var(--text2);"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="card">
+              <div class="card-title">Peg Visualization</div>
+              <canvas id="hanoi-canvas" width="560" height="320"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content-area -->
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<!-- ══ INFO MODAL ══ -->
+<div id="info-overlay" class="info-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="info-modal">
+    <div class="info-modal-header">
+      <h2 id="modal-title">Algorithm Info</h2>
+      <button class="info-close-btn" id="info-close-btn" aria-label="Close">✕</button>
+    </div>
+    <div class="info-modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
