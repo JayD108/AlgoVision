@@ -325,7 +325,7 @@ document.getElementById('huf-compress-btn').addEventListener('click', async () =
     // Stats
     document.getElementById('huf-orig-bits').textContent  = d.original_bits;
     document.getElementById('huf-comp-bits').textContent  = d.compressed_bits;
-    document.getElementById('huf-ratio').textContent      = d.ratio_pct.toFixed(1);
+    document.getElementById('huf-ratio').textContent      = d.compression_ratio.toFixed(1);
     document.getElementById('huf-stats').style.display    = '';
 
     // Encoded binary preview
