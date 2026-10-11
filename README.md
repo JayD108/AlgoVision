@@ -8,32 +8,28 @@ Instead of just looking at static code, this project bridges the gap between alg
 
 ## 🌟 Features
 
-- **Rich Visualizations:** See algorithms come to life with animated state changes, dynamic graphs, and custom-built canvases.
-- **Interactive Modals:** Every algorithm features an in-depth "Info" panel explaining exactly how it works, its time/space complexity, and real-world software engineering applications.
-- **Zero External UI Libraries:** The frontend is built with purely vanilla HTML, CSS, and JS (No React, no Tailwind). 
-- **High-Performance Backend:** Python's FastAPI backend efficiently runs the data structures and algorithms, returning JSON payloads that drive the frontend UI.
+- **Nine algorithms, nine visualisations:** animated DP tables, a drawn Huffman tree, canvas maps, graphs and boards, all driven by real results from the Python backend.
+- **Learn mode:** every algorithm has an in-depth panel covering how it works, time/space complexity and real-world uses.
+- **Built for exploring:** random/preset inputs, play / pause / step controls, adjustable animation speed, and live validation that matches the server's limits.
+- **Polished UI:** overview page, dark and light themes (follows your OS by default), shareable deep links (`#/tsp`), a mobile slide-out menu, keyboard shortcuts (<kbd>Ctrl</kbd>+<kbd>Enter</kbd> runs the current algorithm; ← → browse N-Queens solutions; arrow keys move around the Sudoku grid) and reduced-motion support.
+- **Zero UI libraries:** vanilla HTML, CSS and JavaScript — no build step.
+- **Safe by default:** every endpoint has input limits sized so no single request can exhaust the server.
 
 ---
 
 ## 🧮 Implemented Algorithms
 
-The platform classifies problems into common algorithmic paradigms:
-
-### 1. Greedy approach
-* **Huffman Coding:** A lossless data compression algorithm. Type text and watch the backend construct the Huffman tree, generate optimal prefix codes, and calculate the exact space saved versus standard ASCII.
-
-### 2. Dynamic Programming (DP)
-* **Stock Profit (`K` Transactions):** An advanced DP algorithm (LeetCode #188). Given a list of stock prices and a constrained number of total trades, it maps out the absolute optimal buy/sell days to maximize profit.
-* **0/1 Knapsack:** The quintessential DP resource allocation problem. Provide item weights/values and watch the bounded DP table animate row-by-row to find the optimal combination of items.
-
-### 3. NP-Hard & Optimization
-* **TSP Solver (Held-Karp):** The Travelling Salesman Problem. Click on a canvas to drop cities, and the backend utilizes precise bitmask Dynamic Programming to compute the shortest complete tour.
-
-### 4. Backtracking
-* **N-Queens:** Solve the classic puzzle of placing N non-attacking queens on an N×N board. The app recursively finds all valid solutions and allows you to page through them visually.
-
-### 5. Recursion
-* **Tower of Hanoi:** A visualization of the elegant divide-and-conquer recursion problem. Configure the number of disks and animation speed to watch the recursion tree unfold physically.
+| Paradigm | Algorithm | What you can do |
+|---|---|---|
+| Greedy | **Huffman Coding** | Compress text; see the code table, the Huffman tree, and compression vs. Shannon entropy. |
+| Dynamic Programming | **Stock Profit (K transactions)** | Find optimal buy/sell days (LeetCode #188) on a price chart. |
+| Dynamic Programming | **0/1 Knapsack** | Watch the DP table fill row by row and the backtracking path light up. |
+| NP-Hard | **Travelling Salesman** | Click to place up to 30 cities. Exact Held-Karp bitmask DP up to 15 cities; nearest-neighbour + 2-opt heuristic beyond. |
+| Backtracking | **N-Queens** | Enumerate all solutions (bitmask backtracking) and page through them; verify your own placement with conflicts highlighted. |
+| Backtracking | **Sudoku** | Solve any puzzle with MRV-ordered backtracking; conflicts are flagged as you type. Includes the "world's hardest" puzzles. |
+| Recursion | **Tower of Hanoi** | Animate the 2ⁿ−1 moves with play, pause and single-step. |
+| Graphs | **Max Flow (Edmonds-Karp)** | Edit a network, see flow/capacity on every edge, replay augmenting paths, and see the minimum cut. |
+| Game Theory | **Tic-Tac-Toe AI** | Play against minimax with alpha-beta pruning; optionally show the AI's score for every move. |
 
 ---
 
@@ -100,7 +96,7 @@ You need a hosting provider that supports Python apps. Great free/cheap options 
 ### Part 2: Preparing the Frontend
 Before deploying the frontend, you must tell it to talk to your *newly deployed backend* instead of your local machine.
 
-Open `frontend/app.js` and set `PROD_API` to your deployed backend URL (no trailing slash):
+Open `frontend/js/core.js` and set `PROD_API` to your deployed backend URL (no trailing slash):
 ```javascript
 const PROD_API = 'https://algovision-api.onrender.com';
 ```
@@ -120,7 +116,22 @@ The frontend requires only static hosting (HTML/CSS/JS). Great free options are 
 ---
 
 ## 💡 Developer Notes
-The `backend/algorithms/` folder is designed to be easily extensible. To add a new algorithm:
-1. Write the logic in a new python file in `backend/algorithms/`.
-2. Map it to an endpoint in `backend/main.py`.
-3. Register the UI logic and `ALGO_INFO` metadata in `frontend/app.js`.
+
+```
+backend/
+  main.py                 FastAPI app: request models (input limits), routes
+  algorithms/*.py         one pure module per algorithm
+frontend/
+  index.html              layout + markup for every view
+  styles.css              design tokens (dark/light) and components
+  js/info.js              ALGO_INFO: titles, badges, Learn-panel content
+  js/core.js              API client, LIMITS, NAV, routing, theme, modal, helpers
+  js/views/*.js           one file per view; each calls registerView()
+tests/                    pytest: brute-force cross-checks + API validation
+```
+
+To add a new algorithm:
+1. Write the logic in a new module in `backend/algorithms/` and add tests in `tests/`.
+2. Add a Pydantic request model with sensible limits and a route in `backend/main.py`.
+3. Add its metadata to `ALGO_INFO` (`js/info.js`), an entry to `NAV` and any limits to `LIMITS` (`js/core.js`).
+4. Add a `<section id="view-<id>" class="view" hidden>` to `index.html` and a `js/views/<id>.js` that calls `registerView('<id>', { run, redraw, onShow })`.
