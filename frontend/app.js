@@ -2,7 +2,12 @@
    AlgoVision — DAA Interactive Dashboard — app.js  v3.0
    ============================================================ */
 
-const API = 'https://algovision-3xi3.onrender.com';
+// Local dev (start.bat, `python -m http.server`) talks to the local backend;
+// any other host uses the deployed API.
+const PROD_API = 'https://algovision-3xi3.onrender.com';
+const API = ['localhost', '127.0.0.1', ''].includes(location.hostname)
+  ? 'http://localhost:8080'
+  : PROD_API;
 
 // Must match the Pydantic limits in backend/main.py.
 const LIMITS = {
