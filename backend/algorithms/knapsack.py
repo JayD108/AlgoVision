@@ -12,6 +12,8 @@ def solve_knapsack(weights: List[int], values: List[int], capacity: int) -> Dict
         raise ValueError("Capacity must be positive.")
     if n != len(values):
         raise ValueError("Weights and values lists must have equal length.")
+    if any(w < 0 for w in weights) or any(v < 0 for v in values):
+        raise ValueError("Weights and values must be non-negative.")
 
     # Build DP table  dp[i][w] = max value using first i items with capacity w
     dp = [[0] * (capacity + 1) for _ in range(n + 1)]
@@ -40,9 +42,7 @@ def solve_knapsack(weights: List[int], values: List[int], capacity: int) -> Dict
     total_value  = dp[n][capacity]
     total_weight = sum(weights[i] for i in selected)
 
-    # Build a compact representation of the DP table for the frontend
-    # We only send the last two rows at each step to keep payload small
-    # Instead we send the full table (capped at capacity=50 for display)
+    # Send the full table, but only columns 0..50 to keep the payload small
     display_cap = min(capacity, 50)
     table_rows = []
     for i in range(n + 1):
