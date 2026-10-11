@@ -1,7 +1,7 @@
 """
 minimax.py — Game Theory: Tic-Tac-Toe with Minimax + Alpha-Beta Pruning
 """
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 
 Board = List[List[str]]  # 3x3 grid of "", "X", "O"

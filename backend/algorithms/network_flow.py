@@ -2,7 +2,7 @@
 network_flow.py — Ford-Fulkerson (BFS / Edmonds-Karp) Max Flow
 """
 from collections import deque
-from typing import List, Dict
+from typing import List
 
 
 def _bfs(graph: List[List[int]], source: int, sink: int, parent: List[int]) -> bool:

@@ -4,6 +4,18 @@
 
 const API = 'https://algovision-3xi3.onrender.com';
 
+// Must match the Pydantic limits in backend/main.py.
+const LIMITS = {
+  huffmanChars: 10000,
+  stockPrices: 1000,
+  stockK: 100,
+  ksItems: 20,
+  ksCapacity: 500,
+  tspCities: 30,
+  nqueensN: 12,
+  hanoiN: 10,
+};
+
 /* ── Algorithm metadata (for topbar + info modal) ─────────────────── */
 const ALGO_INFO = {
   huffman: {
@@ -122,7 +134,7 @@ The bitmask S encodes which cities have been visited as bits of an integer.`,
         { icon: '🏭', name: 'PCB Drilling', desc: 'Drilling holes in circuit boards in minimum-distance order reduces manufacturing time.' },
         { icon: '🌐', name: 'Network Optimization', desc: 'Routing internet packets or planning fiber-optic cable layouts are TSP-related graph problems.' },
       ],
-      projectContext: `Click on the canvas to place cities (or input coordinates). The backend runs Held-Karp exact DP (up to 14 cities) or nearest-neighbor heuristic for larger inputs. The solution is drawn as an animated route on the canvas with city labels and distance display.`,
+      projectContext: `Click on the canvas to place cities (or input coordinates). The backend runs Held-Karp exact DP for up to 15 cities, and for 16–30 cities a nearest-neighbour tour improved by 2-opt (fast and usually optimal or close to it, but not guaranteed). The solution is drawn as an animated route on the canvas with city labels and distance display.`,
     }
   },
   nqueens: {
@@ -188,6 +200,60 @@ The recursion stack depth is N. Total calls: 2ⁿ−1 (each call is one disk mov
     }
   },
 };
+
+/* ── API helper ───────────────────────────────────────────────────────── */
+// Turns every failure shape into an Error with a readable message:
+// FastAPI 422s (detail is a list), 400s (detail is a string), non-JSON
+// gateway errors (e.g. Render waking up) and network failures.
+async function postJSON(path, body) {
+  let res;
+  try {
+    res = await fetch(`${API}${path}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error('Cannot reach the backend. It may be starting up — try again in a few seconds.');
+  }
+  let data = null;
+  try { data = await res.json(); } catch { /* non-JSON body */ }
+  if (!res.ok) {
+    const detail = data?.detail;
+    let msg;
+    if (Array.isArray(detail)) {
+      msg = detail.map(d => {
+        const field = (d.loc || []).filter(x => x !== 'body').join('.');
+        return field ? `${field}: ${d.msg}` : d.msg;
+      }).join('; ');
+    } else if (typeof detail === 'string') {
+      msg = detail;
+    } else {
+      msg = `Server error (HTTP ${res.status})`;
+    }
+    throw new Error(msg);
+  }
+  return data;
+}
+
+/* ── Toasts (non-blocking replacement for alert) ─────────────────────── */
+function toast(message, type = 'error') {
+  let root = document.getElementById('toast-root');
+  if (!root) {
+    root = document.createElement('div');
+    root.id = 'toast-root';
+    root.setAttribute('aria-live', 'polite');
+    document.body.appendChild(root);
+  }
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = message;
+  root.appendChild(el);
+  setTimeout(() => { el.classList.add('toast-out'); setTimeout(() => el.remove(), 300); }, 4000);
+}
+
+function parseIntList(raw) {
+  return raw.split(',').map(s => s.trim()).filter(Boolean).map(Number);
+}
 
 /* ── Backend health check ─────────────────────────────────────────────── */
 async function checkBackend() {
@@ -308,19 +374,15 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeInfoMod
    ════════════════════════════════════════════════════════════════════════ */
 document.getElementById('huf-compress-btn').addEventListener('click', async () => {
   const text = document.getElementById('huf-text').value.trim();
-  if (!text) return;
+  if (!text) return toast('Enter some text to compress.');
+  if (text.length > LIMITS.huffmanChars) return toast(`Text is limited to ${LIMITS.huffmanChars} characters.`);
 
   const btn = document.getElementById('huf-compress-btn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Compressing…';
 
   try {
-    const res = await fetch(`${API}/api/huffman`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
-    });
-    if (!res.ok) throw new Error((await res.json()).detail);
-    const d = await res.json();
+    const d = await postJSON('/api/huffman', { text });
 
     // Stats
     document.getElementById('huf-orig-bits').textContent  = d.original_bits;
@@ -329,7 +391,7 @@ document.getElementById('huf-compress-btn').addEventListener('click', async () =
     document.getElementById('huf-stats').style.display    = '';
 
     // Encoded binary preview
-    document.getElementById('huf-encoded').textContent    = d.encoded.substring(0, 800) + (d.encoded.length > 800 ? '…' : '');
+    document.getElementById('huf-encoded').textContent    = d.encoded;
     document.getElementById('huf-encoded-card').style.display = '';
 
     // Code table
@@ -337,17 +399,18 @@ document.getElementById('huf-compress-btn').addEventListener('click', async () =
     tbody.innerHTML = '';
     d.table.sort((a, b) => b.freq - a.freq).forEach(row => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${row.char === ' ' ? '<em style="color:var(--text3)">SPC</em>' : row.char}</td>
-        <td>${row.freq}</td>
-        <td><span style="color:var(--cyan);font-family:var(--font-mono)">${row.code}</span></td>
-        <td>${row.code.length}</td>`;
+      const special = HUFFMAN_SPECIAL[row.char];
+      const charCell = cell(tr, special || row.char);
+      if (special) charCell.className = 'muted-cell';
+      cell(tr, row.freq);
+      cell(tr, row.code).className = 'code-cell';
+      cell(tr, row.bits);
       tbody.appendChild(tr);
     });
     document.getElementById('huf-table-card').style.display = '';
 
   } catch (e) {
-    alert('Huffman error: ' + e.message);
+    toast('Huffman: ' + e.message);
   } finally {
     btn.disabled = false;
     btn.innerHTML = '🗜️ Compress';
@@ -381,8 +444,9 @@ function drawStockChart(prices, transactions) {
   const max = Math.max(...prices);
   const n   = prices.length;
 
+  const range = (max - min) || 1;
   const px = i => pad.left + (i / (n - 1)) * cw;
-  const py = v => pad.top  + (1 - (v - min) / (max - min + 1)) * ch;
+  const py = v => pad.top  + (1 - (v - min) / range) * ch;
 
   // Grid
   stockCtx.strokeStyle = 'rgba(255,255,255,0.05)';
@@ -390,7 +454,7 @@ function drawStockChart(prices, transactions) {
   for (let g = 0; g <= 4; g++) {
     const y = pad.top + (g / 4) * ch;
     stockCtx.beginPath(); stockCtx.moveTo(pad.left, y); stockCtx.lineTo(W - pad.right, y); stockCtx.stroke();
-    const val = max - (g / 4) * (max - min);
+    const val = max - (g / 4) * range;
     stockCtx.fillStyle = 'rgba(148,163,184,0.5)';
     stockCtx.font = '10px JetBrains Mono';
     stockCtx.fillText(val.toFixed(0), 4, y + 4);
@@ -399,7 +463,7 @@ function drawStockChart(prices, transactions) {
   // Buy/sell background bands
   (transactions || []).forEach(t => {
     stockCtx.fillStyle = 'rgba(34,197,94,0.07)';
-    stockCtx.fillRect(px(t.buy_day), pad.top, px(t.sell_day) - px(t.buy_day), ch);
+    stockCtx.fillRect(px(t.buy_day - 1), pad.top, px(t.sell_day - 1) - px(t.buy_day - 1), ch);
   });
 
   // Price line (gradient)
@@ -417,10 +481,10 @@ function drawStockChart(prices, transactions) {
   (transactions || []).forEach(t => {
     // Buy - green circle
     stockCtx.fillStyle = '#22c55e';
-    stockCtx.beginPath(); stockCtx.arc(px(t.buy_day), py(t.buy_price), 5, 0, Math.PI * 2); stockCtx.fill();
+    stockCtx.beginPath(); stockCtx.arc(px(t.buy_day - 1), py(t.buy_price), 5, 0, Math.PI * 2); stockCtx.fill();
     // Sell - red circle
     stockCtx.fillStyle = '#f43f5e';
-    stockCtx.beginPath(); stockCtx.arc(px(t.sell_day), py(t.sell_price), 5, 0, Math.PI * 2); stockCtx.fill();
+    stockCtx.beginPath(); stockCtx.arc(px(t.sell_day - 1), py(t.sell_price), 5, 0, Math.PI * 2); stockCtx.fill();
   });
 
   // X-axis day labels
@@ -428,26 +492,24 @@ function drawStockChart(prices, transactions) {
   stockCtx.font = '10px JetBrains Mono';
   prices.forEach((_, i) => {
     if (n <= 20 || i % Math.ceil(n / 10) === 0)
-      stockCtx.fillText(`D${i}`, px(i) - 8, H - pad.bottom + 18);
+      stockCtx.fillText(`D${i + 1}`, px(i) - 8, H - pad.bottom + 18);
   });
 }
 
 document.getElementById('stock-solve-btn').addEventListener('click', async () => {
   const raw = document.getElementById('stock-prices').value;
-  const prices = raw.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
-  const k = parseInt(document.getElementById('stock-k').value);
-  if (prices.length < 2) return alert('Enter at least 2 prices.');
+  const prices = parseIntList(raw);
+  const k = Number(document.getElementById('stock-k').value);
+  if (prices.some(p => !Number.isInteger(p) || p < 0)) return toast('Prices must be non-negative whole numbers.');
+  if (prices.length < 2) return toast('Enter at least 2 prices.');
+  if (prices.length > LIMITS.stockPrices) return toast(`At most ${LIMITS.stockPrices} prices are supported.`);
+  if (!Number.isInteger(k) || k < 1 || k > LIMITS.stockK) return toast(`K must be between 1 and ${LIMITS.stockK}.`);
 
   const btn = document.getElementById('stock-solve-btn');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Solving…';
 
   try {
-    const res = await fetch(`${API}/api/stock`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prices, k })
-    });
-    if (!res.ok) throw new Error((await res.json()).detail);
-    const d = await res.json();
+    const d = await postJSON('/api/stock', { prices, k });
 
     document.getElementById('stock-profit').textContent = d.max_profit;
 
@@ -455,10 +517,12 @@ document.getElementById('stock-solve-btn').addEventListener('click', async () =>
     tbody.innerHTML = '';
     d.transactions.forEach((t, idx) => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${idx+1}</td><td>Day ${t.buy_day}</td><td>Day ${t.sell_day}</td>
-        <td style="color:var(--green)">$${t.buy_price}</td>
-        <td style="color:var(--red)">$${t.sell_price}</td>
-        <td style="color:var(--amber);font-weight:700">+${t.profit}</td>`;
+      cell(tr, idx + 1);
+      cell(tr, `Day ${t.buy_day}`);
+      cell(tr, `Day ${t.sell_day}`);
+      cell(tr, `$${t.buy_price}`).className = 'pos-cell';
+      cell(tr, `$${t.sell_price}`).className = 'neg-cell';
+      cell(tr, `+${t.profit}`).className = 'amber-cell';
       tbody.appendChild(tr);
     });
 
@@ -466,7 +530,7 @@ document.getElementById('stock-solve-btn').addEventListener('click', async () =>
     drawStockChart(prices, d.transactions);
 
   } catch (e) {
-    showBanner('stock-banner', '❌ ' + e.message, 'error');
+    showBanner('stock-banner', '❌ ' + escapeHTML(e.message), 'error');
   } finally {
     btn.disabled = false; btn.innerHTML = '📈 Find Max Profit';
   }
@@ -476,23 +540,22 @@ document.getElementById('stock-solve-btn').addEventListener('click', async () =>
    0/1 KNAPSACK
    ════════════════════════════════════════════════════════════════════════ */
 document.getElementById('ks-solve-btn').addEventListener('click', async () => {
-  const weights  = document.getElementById('ks-weights').value.split(',').map(s => parseInt(s.trim())).filter(x => !isNaN(x));
-  const values   = document.getElementById('ks-values').value.split(',').map(s => parseInt(s.trim())).filter(x => !isNaN(x));
-  const capacity = parseInt(document.getElementById('ks-capacity').value);
+  const weights  = parseIntList(document.getElementById('ks-weights').value);
+  const values   = parseIntList(document.getElementById('ks-values').value);
+  const capacity = Number(document.getElementById('ks-capacity').value);
 
-  if (weights.length === 0 || weights.length !== values.length) return alert('Weights and values must have the same count.');
-  if (isNaN(capacity) || capacity <= 0) return alert('Enter a valid capacity.');
+  const bad = x => !Number.isInteger(x) || x < 0;
+  if (weights.some(bad) || values.some(bad)) return toast('Weights and values must be non-negative whole numbers.');
+  if (weights.length === 0 || weights.length !== values.length) return toast('Weights and values must have the same count.');
+  if (weights.length > LIMITS.ksItems) return toast(`At most ${LIMITS.ksItems} items are supported.`);
+  if (weights.some(w => w > LIMITS.ksCapacity)) return toast(`Each weight must be at most ${LIMITS.ksCapacity}.`);
+  if (!Number.isInteger(capacity) || capacity < 1 || capacity > LIMITS.ksCapacity) return toast(`Capacity must be between 1 and ${LIMITS.ksCapacity}.`);
 
   const btn = document.getElementById('ks-solve-btn');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Solving…';
 
   try {
-    const res = await fetch(`${API}/api/knapsack`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ weights, values, capacity })
-    });
-    if (!res.ok) throw new Error((await res.json()).detail);
-    const d = await res.json();
+    const d = await postJSON('/api/knapsack', { weights, values, capacity });
 
     // Stats
     document.getElementById('ks-value').textContent  = d.max_value;
@@ -505,14 +568,10 @@ document.getElementById('ks-solve-btn').addEventListener('click', async () => {
     tbody.innerHTML = '';
     d.items.forEach(item => {
       const tr = document.createElement('tr');
-      const yes = item.selected;
-      tr.innerHTML = `
-        <td>Item ${item.index + 1}</td>
-        <td>${item.weight}</td>
-        <td>${item.value}</td>
-        <td style="color:${yes ? 'var(--green)' : 'var(--text3)'};font-weight:${yes ? 700 : 400}">
-          ${yes ? '✔ Selected' : '✗ Skipped'}
-        </td>`;
+      cell(tr, `Item ${item.index + 1}`);
+      cell(tr, item.weight);
+      cell(tr, item.value);
+      cell(tr, item.selected ? '✔ Selected' : '✗ Skipped').className = item.selected ? 'pos-cell strong' : 'muted-cell';
       tbody.appendChild(tr);
     });
     document.getElementById('ks-items-card').style.display = '';
@@ -521,12 +580,13 @@ document.getElementById('ks-solve-btn').addEventListener('click', async () => {
     animateKnapsackTable(d);
 
   } catch (e) {
-    alert('Knapsack error: ' + e.message);
+    toast('Knapsack: ' + e.message);
   } finally {
     btn.disabled = false; btn.innerHTML = '🎒 Solve Knapsack';
   }
 });
 
+let ksAnimId = 0;
 function animateKnapsackTable(d) {
   const container = document.getElementById('ks-table-container');
   document.getElementById('ks-table-placeholder').style.display = 'none';
@@ -547,8 +607,8 @@ function animateKnapsackTable(d) {
   const rows = [];
   for (let i = 0; i <= d.n_items; i++) {
     const tr = document.createElement('tr');
-    const labelText = i === 0 ? 'None' : `Item ${i} (w=${d.items[i-1]?.weight || '?'}, v=${d.items[i-1]?.value || '?'})`;
-    tr.innerHTML = `<td class="ks-row-label">${labelText}</td>`;
+    const labelText = i === 0 ? 'None' : `Item ${i} (w=${d.items[i-1].weight}, v=${d.items[i-1].value})`;
+    cell(tr, labelText).className = 'ks-row-label';
     const cells = [];
     for (let w = 0; w <= d.display_cap; w++) {
       const td = document.createElement('td');
@@ -564,10 +624,11 @@ function animateKnapsackTable(d) {
   container.innerHTML = '';
   container.appendChild(table);
 
-  // Animate row by row
+  // Animate row by row. A newer solve bumps ksAnimId so stale timers stop.
+  const animId = ++ksAnimId;
   let i = 0;
   function fillNextRow() {
-    if (i > d.n_items) return;
+    if (animId !== ksAnimId || i > d.n_items) return;
     const rowData = d.dp_table[i];
     for (let w = 0; w <= d.display_cap && w < rowData.length; w++) {
       const td = rows[i][w];
@@ -577,15 +638,20 @@ function animateKnapsackTable(d) {
         td.classList.add('ks-highlighted');
       }
     }
-    // After all rows done, mark selected cells
+    // After all rows are filled, trace the backtracking path. It starts at
+    // column = capacity, so it can only be drawn when that column is shown;
+    // otherwise mark the chosen item rows using the server's selection.
     if (i === d.n_items) {
-      let w = Math.min(d.capacity, d.display_cap);
-      for (let ri = d.n_items; ri >= 1; ri--) {
-        if (d.dp_table[ri][w] !== d.dp_table[ri-1][w]) {
-          rows[ri][w].classList.add('ks-selected');
-          w -= (d.items[ri-1]?.weight || 0);
-          if (w < 0) break;
+      if (d.capacity <= d.display_cap) {
+        let w = d.capacity;
+        for (let ri = d.n_items; ri >= 1; ri--) {
+          if (d.dp_table[ri][w] !== d.dp_table[ri-1][w]) {
+            rows[ri][w].classList.add('ks-selected');
+            w -= d.items[ri-1].weight;
+          }
         }
+      } else {
+        d.selected.forEach(idx => rows[idx + 1][0].parentElement.firstChild.classList.add('ks-selected'));
       }
     }
     i++;
@@ -647,7 +713,7 @@ function drawTSP() {
 }
 
 tspCanvas.addEventListener('click', e => {
-  if (tspCities.length >= 15) return;
+  if (tspCities.length >= LIMITS.tspCities) return toast(`At most ${LIMITS.tspCities} cities.`, 'info');
   const rect = tspCanvas.getBoundingClientRect();
   tspCities.push({ x: e.clientX - rect.left, y: e.clientY - rect.top });
   tspTour = null;
@@ -658,14 +724,17 @@ tspCanvas.addEventListener('click', e => {
 
 document.getElementById('tsp-parse-btn').addEventListener('click', () => {
   const raw = document.getElementById('tsp-coord-input').value;
-  const pts = raw.split(';').map(s => {
-    const [x, y] = s.split(',').map(Number);
+  const pts = raw.split(';').filter(s => s.trim()).map(s => {
+    const [x, y] = s.split(',').map(v => Number(v.trim()));
     return { x, y };
-  }).filter(p => !isNaN(p.x) && !isNaN(p.y));
-  if (!pts.length) return alert('No valid coordinates found.');
-  const remaining = 15 - tspCities.length;
-  tspCities.push(...pts.slice(0, remaining));
+  }).filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
+  if (!pts.length) return toast('No valid coordinates found. Use the format x,y; x,y');
+  const remaining = LIMITS.tspCities - tspCities.length;
+  if (pts.length > remaining) toast(`Only ${remaining} more cities fit (max ${LIMITS.tspCities}).`, 'info');
+  tspCities.push(...pts.slice(0, Math.max(0, remaining)));
   tspTour = null;
+  document.getElementById('tsp-dist').textContent = '—';
+  document.getElementById('tsp-method').textContent = '—';
   drawTSP();
 });
 
@@ -678,27 +747,23 @@ document.getElementById('tsp-clear-btn').addEventListener('click', () => {
 });
 
 document.getElementById('tsp-solve-btn').addEventListener('click', async () => {
-  if (tspCities.length < 2) return alert('Place at least 2 cities on the canvas.');
+  if (tspCities.length < 2) return toast('Place at least 2 cities on the canvas.');
 
   const btn = document.getElementById('tsp-solve-btn');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Solving…';
 
   try {
-    const res = await fetch(`${API}/api/tsp`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cities: tspCities.map(c => ({ x: c.x, y: c.y })) })
-    });
-    if (!res.ok) throw new Error((await res.json()).detail);
-    const d = await res.json();
+    const d = await postJSON('/api/tsp', { cities: tspCities.map(c => ({ x: c.x, y: c.y })) });
     tspTour = d.tour;
     document.getElementById('tsp-dist').textContent   = d.distance.toFixed(1);
-    document.getElementById('tsp-method').textContent = d.method || 'Held-Karp';
-    showBanner('tsp-banner', `✅ Tour distance: <strong>${d.distance.toFixed(1)}</strong> units via ${d.method || 'Held-Karp'}`, 'success');
+    document.getElementById('tsp-method').textContent = d.method;
+    const note = d.optimal ? 'guaranteed optimal' : 'heuristic — near-optimal, not guaranteed';
+    showBanner('tsp-banner', `✅ Tour distance: <strong>${d.distance.toFixed(1)}</strong> units via ${d.method} (${note})`, 'success');
     drawTSP();
   } catch (e) {
-    showBanner('tsp-banner', '❌ ' + e.message, 'error');
+    showBanner('tsp-banner', '❌ ' + escapeHTML(e.message), 'error');
   } finally {
-    btn.disabled = false; btn.innerHTML = '🗺️ Solve TSP (Held-Karp)';
+    btn.disabled = false; btn.innerHTML = '🗺️ Solve TSP';
   }
 });
 
@@ -710,6 +775,7 @@ setTimeout(resizeTSPCanvas, 100);
    ════════════════════════════════════════════════════════════════════════ */
 let nqSolutions = [];
 let nqIndex     = 0;
+let nqN         = 0;   // N the current solutions were computed for
 
 function renderNQBoard(solution, n) {
   const container = document.getElementById('nq-board-container');
@@ -743,20 +809,16 @@ function renderNQBoard(solution, n) {
 
 document.getElementById('nq-solve-btn').addEventListener('click', async () => {
   const n = parseInt(document.getElementById('nq-n').value);
-  if (isNaN(n) || n < 1 || n > 12) return alert('N must be 1–12');
+  if (isNaN(n) || n < 1 || n > LIMITS.nqueensN) return toast(`N must be 1–${LIMITS.nqueensN}.`);
 
   const btn = document.getElementById('nq-solve-btn');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Solving…';
 
   try {
-    const res = await fetch(`${API}/api/nqueens`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ n })
-    });
-    if (!res.ok) throw new Error((await res.json()).detail);
-    const d = await res.json();
+    const d = await postJSON('/api/nqueens', { n });
     nqSolutions = d.solutions;
     nqIndex     = 0;
+    nqN         = n;
 
     document.getElementById('nq-size-stat').textContent = `${n}×${n}`;
     document.getElementById('nq-total').textContent     = nqSolutions.length;
@@ -769,7 +831,7 @@ document.getElementById('nq-solve-btn').addEventListener('click', async () => {
       showBanner('nq-banner', `❌ No solutions exist for N=${n}.`, 'error');
     }
   } catch (e) {
-    showBanner('nq-banner', '❌ ' + e.message, 'error');
+    showBanner('nq-banner', '❌ ' + escapeHTML(e.message), 'error');
   } finally {
     btn.disabled = false; btn.innerHTML = '♛ Solve N-Queens';
   }
@@ -778,37 +840,35 @@ document.getElementById('nq-solve-btn').addEventListener('click', async () => {
 document.getElementById('nq-prev-btn').addEventListener('click', () => {
   if (!nqSolutions.length) return;
   nqIndex = (nqIndex - 1 + nqSolutions.length) % nqSolutions.length;
-  renderNQBoard(nqSolutions[nqIndex], parseInt(document.getElementById('nq-n').value));
+  renderNQBoard(nqSolutions[nqIndex], nqN);
   document.getElementById('nq-viewing').textContent = `${nqIndex + 1} / ${nqSolutions.length}`;
 });
 
 document.getElementById('nq-next-btn').addEventListener('click', () => {
   if (!nqSolutions.length) return;
   nqIndex = (nqIndex + 1) % nqSolutions.length;
-  renderNQBoard(nqSolutions[nqIndex], parseInt(document.getElementById('nq-n').value));
+  renderNQBoard(nqSolutions[nqIndex], nqN);
   document.getElementById('nq-viewing').textContent = `${nqIndex + 1} / ${nqSolutions.length}`;
 });
 
 document.getElementById('nq-verify-btn').addEventListener('click', async () => {
   const raw = document.getElementById('nq-custom').value.trim();
   const n   = parseInt(document.getElementById('nq-n').value);
-  const placement = raw.split(/\s+/).map(Number).filter(x => !isNaN(x));
-  if (!placement.length) return alert('Enter a placement first.');
+  const placement = raw.split(/[\s,]+/).filter(Boolean).map(Number);
+  if (!placement.length) return toast('Enter a placement first.');
+  if (placement.some(x => !Number.isInteger(x))) return toast('Placement must be whole numbers separated by spaces.');
+  if (isNaN(n) || n < 1 || n > LIMITS.nqueensN) return toast(`N must be 1–${LIMITS.nqueensN}.`);
 
   try {
-    const res = await fetch(`${API}/api/nqueens/verify`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ placement, n })
-    });
-    const d = await res.json();
+    const d = await postJSON('/api/nqueens/verify', { placement, n });
     if (d.valid) {
       renderNQBoard(placement, n);
       showBanner('nq-banner', '✅ Valid placement! All queens are safe.', 'success');
     } else {
-      showBanner('nq-banner', `❌ Invalid: ${d.reason}`, 'error');
+      showBanner('nq-banner', `❌ Invalid: ${escapeHTML(d.reason)}`, 'error');
     }
   } catch (e) {
-    showBanner('nq-banner', '❌ ' + e.message, 'error');
+    showBanner('nq-banner', '❌ ' + escapeHTML(e.message), 'error');
   }
 });
 
@@ -836,12 +896,18 @@ function hanoiPegX(pegId, canvasW) {
   return section * idx + section / 2;
 }
 
-function drawHanoiCanvas() {
+function sizeHanoiCanvas() {
   const W = hCanvas.offsetWidth  || 560;
   const H = hCanvas.offsetHeight || 300;
   hCanvas.width  = W * devicePixelRatio;
   hCanvas.height = H * devicePixelRatio;
-  hCtx.scale(devicePixelRatio, devicePixelRatio);
+  hCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+}
+
+function drawHanoiCanvas() {
+  const W = hCanvas.offsetWidth  || 560;
+  const H = hCanvas.offsetHeight || 300;
+  if (hCanvas.width !== Math.round(W * devicePixelRatio)) sizeHanoiCanvas();
 
   hCtx.clearRect(0, 0, W, H);
 
@@ -927,7 +993,7 @@ function applyHanoiMove(move) {
 
 document.getElementById('hanoi-solve-btn').addEventListener('click', async () => {
   const n = parseInt(document.getElementById('hanoi-n').value);
-  if (isNaN(n) || n < 1 || n > 10) return alert('N must be 1–10.');
+  if (isNaN(n) || n < 1 || n > LIMITS.hanoiN) return toast(`N must be 1–${LIMITS.hanoiN}.`);
 
   if (hanoiTimer) { clearInterval(hanoiTimer); hanoiTimer = null; }
 
@@ -935,12 +1001,7 @@ document.getElementById('hanoi-solve-btn').addEventListener('click', async () =>
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Solving…';
 
   try {
-    const res = await fetch(`${API}/api/hanoi`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ n })
-    });
-    if (!res.ok) throw new Error((await res.json()).detail);
-    const d = await res.json();
+    const d = await postJSON('/api/hanoi', { n });
 
     hanoiMoves = d.moves;
     hanoiN     = n;
@@ -987,7 +1048,7 @@ document.getElementById('hanoi-solve-btn').addEventListener('click', async () =>
     }, speed);
 
   } catch (e) {
-    showBanner('hanoi-banner', '❌ ' + e.message, 'error');
+    showBanner('hanoi-banner', '❌ ' + escapeHTML(e.message), 'error');
     btn.disabled = false; btn.innerHTML = '🗼 Solve & Animate';
   }
 });
@@ -1009,6 +1070,20 @@ document.getElementById('hanoi-reset-btn').addEventListener('click', () => {
 /* ════════════════════════════════════════════════════════════════════════
    UTILITY FUNCTIONS
    ════════════════════════════════════════════════════════════════════════ */
+function escapeHTML(str) {
+  return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Append a <td> whose content is set as text, never parsed as HTML.
+function cell(tr, text) {
+  const td = document.createElement('td');
+  td.textContent = text;
+  tr.appendChild(td);
+  return td;
+}
+
+const HUFFMAN_SPECIAL = { 'SPACE': '␣ space', '\n': '↵ newline', '\t': '⇥ tab', '\r': '␍ return' };
+
 function showBanner(id, html, type = 'info') {
   const el = document.getElementById(id);
   el.innerHTML = html;
