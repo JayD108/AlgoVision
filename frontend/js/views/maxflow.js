@@ -130,9 +130,9 @@
       ctx.globalAlpha = 1;
 
       const label = f ? `${f.flow}/${f.capacity}` : `${e.capacity}`;
-      ctx.font = 'bold 11px "JetBrains Mono", monospace';
+      ctx.font = '500 11px "JetBrains Mono", monospace';
       const tw = ctx.measureText(label).width + 8;
-      ctx.fillStyle = P.card;
+      ctx.fillStyle = P.surface;
       ctx.fillRect(lx - tw / 2, ly - 8, tw, 16);
       ctx.fillStyle = f?.saturated ? P.red : P.text;
       ctx.textAlign = 'center';
@@ -144,12 +144,13 @@
 
     for (let v = 0; v < n; v++) {
       const { x, y } = pos[v];
-      ctx.fillStyle = v === s ? P.green : v === t ? P.red : P.surface;
+      const terminal = v === s || v === t;
+      ctx.fillStyle = terminal ? P.text : P.card;
       ctx.strokeStyle = sourceSide.has(v) ? P.green : P.text3;
-      ctx.lineWidth = sourceSide.has(v) ? 3 : 1.5;
+      ctx.lineWidth = sourceSide.has(v) ? 2.5 : 1.25;
       ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = v === s || v === t ? '#fff' : P.text;
-      ctx.font = 'bold 12px Inter, sans-serif';
+      ctx.fillStyle = terminal ? P.card : P.text;
+      ctx.font = '600 12px Inter, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(v === s ? 's' : v === t ? 't' : v, x, y);
@@ -221,11 +222,11 @@
         $('flow-npaths').textContent = result.augmenting_paths.length;
         $('flow-cut').textContent = result.min_cut.capacity;
         const cutText = result.min_cut.edges.map(e => `${e.from}→${e.to}`).join(', ') || 'none';
-        showBanner('flow-banner', `✅ Max flow <strong>${result.max_flow}</strong> = min cut capacity <strong>${result.min_cut.capacity}</strong> (cut edges: ${escapeHTML(cutText)}).`, 'success');
+        showBanner('flow-banner', `Max flow <strong>${result.max_flow}</strong> = min cut capacity <strong>${result.min_cut.capacity}</strong> (cut edges: ${escapeHTML(cutText)}).`, 'success');
         renderPaths();
         draw();
       } catch (e) {
-        showBanner('flow-banner', '❌ ' + escapeHTML(e.message), 'error');
+        showBanner('flow-banner', '' + escapeHTML(e.message), 'error');
       }
     });
   }

@@ -33,7 +33,7 @@
           cell(tr, item.weight);
           cell(tr, item.value);
           cell(tr, item.weight ? (item.value / item.weight).toFixed(2) : '∞');
-          cell(tr, item.selected ? '✔ Taken' : '✗ Skipped', item.selected ? 'pos-cell strong' : 'muted-cell');
+          cell(tr, item.selected ? 'Taken' : 'Skipped', item.selected ? 'pos-cell strong' : 'muted-cell');
           tbody.appendChild(tr);
         });
         $('ks-items-card').hidden = false;

@@ -88,10 +88,10 @@
         $('sudoku-nodes').textContent = d.nodes.toLocaleString();
         $('sudoku-backtracks').textContent = d.backtracks.toLocaleString();
         inputs.forEach((inp, i) => { if (inp.value) inp.classList.add('given'); });
-        showBanner('sudoku-banner', `✅ Solved: filled ${d.fill_order.length} cells after exploring ${d.nodes.toLocaleString()} search nodes with ${d.backtracks.toLocaleString()} backtracks.`, 'success');
+        showBanner('sudoku-banner', `Solved: filled ${d.fill_order.length} cells after exploring ${d.nodes.toLocaleString()} search nodes with ${d.backtracks.toLocaleString()} backtracks.`, 'success');
         await animate(d);
       } catch (e) {
-        showBanner('sudoku-banner', '❌ ' + escapeHTML(e.message), 'error');
+        showBanner('sudoku-banner', '' + escapeHTML(e.message), 'error');
       }
     });
   }

@@ -37,15 +37,12 @@
 
     // Holding periods. Transactions use 1-based days; px() takes a 0-based index.
     transactions.forEach(t => {
-      ctx.fillStyle = P.green + '1f';
+      ctx.fillStyle = P.green + '14';
       ctx.fillRect(px(t.buy_day - 1), pad.top, px(t.sell_day - 1) - px(t.buy_day - 1), ch);
     });
 
-    const grad = ctx.createLinearGradient(pad.left, 0, W - pad.right, 0);
-    grad.addColorStop(0, P.accent);
-    grad.addColorStop(1, P.purple);
-    ctx.strokeStyle = grad;
-    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = P.accent;
+    ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
     ctx.beginPath();
     prices.forEach((p, i) => (i === 0 ? ctx.moveTo(px(i), py(p)) : ctx.lineTo(px(i), py(p))));
@@ -54,7 +51,8 @@
     transactions.forEach(t => {
       [[t.buy_day, t.buy_price, P.green], [t.sell_day, t.sell_price, P.red]].forEach(([day, price, color]) => {
         ctx.fillStyle = color;
-        ctx.beginPath(); ctx.arc(px(day - 1), py(price), 5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(px(day - 1), py(price), 4.5, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = P.surface; ctx.lineWidth = 2; ctx.stroke();
       });
     });
 
@@ -96,11 +94,11 @@
           tbody.appendChild(tr);
         }
         const used = d.transactions.length;
-        showBanner('stock-banner', `✅ Max profit with ≤${k} transactions: <strong>$${d.max_profit}</strong> using ${used} trade${used === 1 ? '' : 's'}.`, 'success');
+        showBanner('stock-banner', `Max profit with ≤${k} transactions: <strong>$${d.max_profit}</strong> using ${used} trade${used === 1 ? '' : 's'}.`, 'success');
         last = { prices, transactions: d.transactions };
         draw();
       } catch (e) {
-        showBanner('stock-banner', '❌ ' + escapeHTML(e.message), 'error');
+        showBanner('stock-banner', '' + escapeHTML(e.message), 'error');
       }
     });
   }

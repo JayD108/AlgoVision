@@ -28,11 +28,8 @@
     }
 
     if (tour && drawn > 0) {
-      const grad = ctx.createLinearGradient(0, 0, W, H);
-      grad.addColorStop(0, P.accent);
-      grad.addColorStop(1, P.purple);
-      ctx.strokeStyle = grad;
-      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = P.accent;
+      ctx.lineWidth = 2;
       ctx.lineJoin = 'round';
       ctx.beginPath();
       for (let i = 0; i <= drawn; i++) {
@@ -46,9 +43,11 @@
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     cities.forEach((c, i) => {
-      ctx.fillStyle = i === 0 ? P.green : P.accent;
-      ctx.beginPath(); ctx.arc(c.x, c.y, 9, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#fff';
+      ctx.fillStyle = i === 0 ? P.text : P.card;
+      ctx.strokeStyle = i === 0 ? P.text : P.text3;
+      ctx.lineWidth = 1.25;
+      ctx.beginPath(); ctx.arc(c.x, c.y, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = i === 0 ? P.surface : P.text;
       ctx.fillText(i, c.x, c.y);
     });
     ctx.textAlign = 'start';
@@ -87,10 +86,10 @@
         const note = d.optimal
           ? 'guaranteed optimal'
           : `heuristic — ${cities.length} cities is above the exact limit of ${LIMITS.tspExact}, so the tour is near-optimal but not guaranteed`;
-        showBanner('tsp-banner', `✅ Tour distance <strong>${d.distance.toFixed(1)}</strong> via ${escapeHTML(d.method)} (${note}).`, 'success');
+        showBanner('tsp-banner', `Tour distance <strong>${d.distance.toFixed(1)}</strong> via ${escapeHTML(d.method)} (${note}).`, 'success');
         animateTour();
       } catch (e) {
-        showBanner('tsp-banner', '❌ ' + escapeHTML(e.message), 'error');
+        showBanner('tsp-banner', '' + escapeHTML(e.message), 'error');
       }
     });
   }
