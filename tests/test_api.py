@@ -66,3 +66,27 @@ def test_cors_preflight_allows_post():
     })
     assert r.status_code == 200
     assert "POST" in r.headers["access-control-allow-methods"]
+
+
+def test_new_endpoints():
+    r = client.post("/api/sudoku", json={"board": [[0] * 9 for _ in range(9)]})
+    assert r.status_code == 200 and len(r.json()["fill_order"]) == 81
+    r = client.post("/api/tictactoe", json={"board": [["X", "", ""], ["", "", ""], ["", "", ""]], "ai": "O"})
+    assert r.status_code == 200 and r.json()["board"][1][1] == "O"
+    r = client.post("/api/maxflow", json={"n": 3, "edges": [{"from": 0, "to": 1, "capacity": 4},
+                                                            {"from": 1, "to": 2, "capacity": 3}], "sink": 2})
+    assert r.status_code == 200 and r.json()["max_flow"] == 3
+
+
+@pytest.mark.parametrize("path,body,code", [
+    ("/api/sudoku", {"board": [[0] * 9 for _ in range(8)]}, 422),
+    ("/api/sudoku", {"board": [[10] + [0] * 8] + [[0] * 9 for _ in range(8)]}, 422),
+    ("/api/sudoku", {"board": [[5, 5] + [0] * 7] + [[0] * 9 for _ in range(8)]}, 400),
+    ("/api/tictactoe", {"board": [["Z", "", ""], ["", "", ""], ["", "", ""]]}, 422),
+    ("/api/tictactoe", {"board": [["X", "X", ""], ["", "", ""], ["", "", ""]]}, 400),
+    ("/api/maxflow", {"n": 13, "edges": [{"from": 0, "to": 1, "capacity": 1}], "sink": 1}, 422),
+    ("/api/maxflow", {"n": 3, "edges": [{"from": 0, "to": 1, "capacity": -1}], "sink": 2}, 422),
+    ("/api/maxflow", {"n": 3, "edges": [{"from": 0, "to": 1, "capacity": 1}], "sink": 0}, 400),
+])
+def test_new_endpoint_validation(path, body, code):
+    assert client.post(path, json=body).status_code == code

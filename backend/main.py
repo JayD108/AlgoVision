@@ -3,7 +3,7 @@ main.py — DAA Interactive Dashboard — FastAPI Backend
 """
 import os
 import sys
-from typing import Annotated, List
+from typing import Annotated, List, Literal
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +18,9 @@ from algorithms.tsp_solver import solve_tsp, MAX_CITIES
 from algorithms.nqueens    import solve_nqueens, verify_placement, MAX_N as NQ_MAX
 from algorithms.knapsack   import solve_knapsack
 from algorithms.hanoi      import solve_hanoi
+from algorithms.sudoku     import solve as solve_sudoku
+from algorithms.minimax    import best_move
+from algorithms.network_flow import max_flow, MAX_NODES as FLOW_MAX_NODES
 
 VERSION = "4.0.0"
 
@@ -83,6 +86,27 @@ class KnapsackRequest(BaseModel):
 class HanoiRequest(BaseModel):
     n: int = Field(..., ge=1, le=10)
 
+Digit = Annotated[int, Field(ge=0, le=9)]
+Cell  = Literal["", "X", "O"]
+
+class SudokuRequest(BaseModel):
+    board: List[Annotated[List[Digit], Field(min_length=9, max_length=9)]] = Field(..., min_length=9, max_length=9)
+
+class TicTacToeRequest(BaseModel):
+    board: List[Annotated[List[Cell], Field(min_length=3, max_length=3)]] = Field(..., min_length=3, max_length=3)
+    ai: Literal["X", "O"] = "O"
+
+class FlowEdge(BaseModel):
+    from_: int = Field(..., alias="from", ge=0, lt=FLOW_MAX_NODES)
+    to: int = Field(..., ge=0, lt=FLOW_MAX_NODES)
+    capacity: int = Field(..., ge=0, le=1000)
+
+class MaxFlowRequest(BaseModel):
+    n: int = Field(..., ge=2, le=FLOW_MAX_NODES)
+    edges: List[FlowEdge] = Field(..., min_length=1, max_length=60)
+    source: int = Field(0, ge=0, lt=FLOW_MAX_NODES)
+    sink: int = Field(..., ge=0, lt=FLOW_MAX_NODES)
+
 
 def _run(fn, *args):
     """Turn input errors raised by algorithms into 400s; let real bugs surface as 500s."""
@@ -124,6 +148,19 @@ def api_knapsack(req: KnapsackRequest):
 @app.post("/api/hanoi")
 def api_hanoi(req: HanoiRequest):
     return _run(solve_hanoi, req.n)
+
+@app.post("/api/sudoku")
+def api_sudoku(req: SudokuRequest):
+    return _run(solve_sudoku, req.board)
+
+@app.post("/api/tictactoe")
+def api_tictactoe(req: TicTacToeRequest):
+    return _run(best_move, req.board, req.ai)
+
+@app.post("/api/maxflow")
+def api_maxflow(req: MaxFlowRequest):
+    edges = [{"from": e.from_, "to": e.to, "capacity": e.capacity} for e in req.edges]
+    return _run(max_flow, req.n, edges, req.source, req.sink)
 
 if __name__ == "__main__":
     import uvicorn
