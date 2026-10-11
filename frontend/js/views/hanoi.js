@@ -1,8 +1,6 @@
 /* Tower of Hanoi — recursive move list animated with play/pause/step. */
 (() => {
   const canvas = $('hanoi-canvas');
-  const DISK_COLORS = ['#f43f5e', '#f59e0b', '#22c55e', '#06b6d4', '#6366f1',
-                       '#a855f7', '#ec4899', '#14b8a6', '#f97316', '#84cc16'];
   let moves = [];
   let step = 0;
   let n = 4;
@@ -33,28 +31,25 @@
 
     ['A', 'B', 'C'].forEach((peg, idx) => {
       const cx = (W / 3) * idx + W / 6;
-      ctx.fillStyle = P.text3;
-      ctx.globalAlpha = 0.45;
-      ctx.fillRect(cx - 4, 50, 8, baseY - 50);
-      ctx.globalAlpha = 1;
-      ctx.font = 'bold 13px Inter, sans-serif';
+      ctx.fillStyle = P.grid;
+      ctx.fillRect(cx - 1.5, 50, 3, baseY - 50);
+      ctx.font = '500 12px Inter, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillStyle = lastMove && lastMove.to === peg ? P.accent2 : P.text2;
+      ctx.fillStyle = lastMove && lastMove.to === peg ? P.text : P.text3;
       ctx.fillText(`Peg ${peg}`, cx, baseY + 22);
 
       pegs[peg].forEach((disk, level) => {
         const w = maxDiskW * (0.3 + 0.7 * (disk / n));
         const y = baseY - diskH * (level + 1);
-        const color = DISK_COLORS[(disk - 1) % DISK_COLORS.length];
-        ctx.fillStyle = color;
+        // One accent colour, darker for larger disks; the last-moved disk is solid.
         const moved = lastMove && lastMove.disk === disk;
-        ctx.shadowColor = color;
-        ctx.shadowBlur = moved ? 16 : 4;
-        roundRect(ctx, cx - w / 2, y, w, diskH - 3, Math.min(8, diskH / 2));
+        ctx.fillStyle = P.accent;
+        ctx.globalAlpha = moved ? 1 : 0.25 + 0.5 * (disk / n);
+        roundRect(ctx, cx - w / 2, y, w, diskH - 3, Math.min(5, diskH / 2));
         ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = '#fff';
-        ctx.font = `bold ${Math.max(9, Math.round(diskH * 0.5))}px "JetBrains Mono", monospace`;
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = moved ? '#fff' : P.text;
+        ctx.font = `500 ${Math.max(9, Math.round(diskH * 0.45))}px "JetBrains Mono", monospace`;
         ctx.textBaseline = 'middle';
         ctx.fillText(disk, cx, y + diskH / 2 - 1);
         ctx.textBaseline = 'alphabetic';
@@ -74,7 +69,7 @@
     $('hanoi-progress').style.width = moves.length ? `${(100 * step) / moves.length}%` : '0%';
     $('hanoi-play-btn').disabled = !moves.length || step >= moves.length;
     $('hanoi-step-btn').disabled = !moves.length || step >= moves.length || !!timer;
-    $('hanoi-play-btn').textContent = timer ? '⏸ Pause' : (step ? '▶ Resume' : '▶ Play');
+    $('hanoi-play-btn').textContent = timer ? 'Pause' : (step ? 'Resume' : 'Play');
   }
 
   function applyNext() {
@@ -95,7 +90,7 @@
 
     if (step >= moves.length) {
       pause();
-      showBanner('hanoi-banner', `✅ Done! Moved ${n} disks in exactly ${moves.length} moves (2ⁿ−1).`, 'success');
+      showBanner('hanoi-banner', `Done! Moved ${n} disks in exactly ${moves.length} moves (2ⁿ−1).`, 'success');
     }
     updateStatus();
   }
@@ -125,12 +120,12 @@
         $('hanoi-disks-stat').textContent = n;
         $('hanoi-total').textContent = d.total_moves;
         $('hanoi-log').innerHTML = '';
-        showBanner('hanoi-banner', `🗼 ${d.total_moves} moves for ${n} disks (2ⁿ−1 = ${d.total_moves}).`, 'info');
+        showBanner('hanoi-banner', `${d.total_moves} moves for ${n} disks (2ⁿ−1 = ${d.total_moves}).`, 'info');
         draw();
         updateStatus();
         play();
       } catch (e) {
-        showBanner('hanoi-banner', '❌ ' + escapeHTML(e.message), 'error');
+        showBanner('hanoi-banner', '' + escapeHTML(e.message), 'error');
       }
     });
   }

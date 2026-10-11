@@ -178,7 +178,7 @@ function buildNav() {
   overview.className = 'nav-item';
   overview.href = '#/overview';
   overview.dataset.view = 'overview';
-  overview.innerHTML = '<span class="nav-icon">🏠</span><span class="nav-label">Overview</span>';
+  overview.innerHTML = '<span class="nav-label">Overview</span>';
   nav.appendChild(overview);
 
   NAV.forEach(group => {
@@ -192,8 +192,7 @@ function buildNav() {
       a.className = 'nav-item';
       a.href = `#/${id}`;
       a.dataset.view = id;
-      a.innerHTML = `<span class="nav-icon">${info.emoji}</span><span class="nav-label">${escapeHTML(name)}</span>`
-        + `<span class="nav-tag ${info.badgeClass}">${escapeHTML(info.badge)}</span>`;
+      a.innerHTML = `<span class="nav-label">${escapeHTML(name)}</span>`;
       nav.appendChild(a);
     });
   });
@@ -201,15 +200,17 @@ function buildNav() {
 
 function buildOverview() {
   const grid = $('overview-grid');
+  let num = 0;
   NAV.forEach(group => group.items.forEach(([id]) => {
     const info = ALGO_INFO[id];
+    num++;
     const a = document.createElement('a');
     a.className = 'algo-card';
     a.href = `#/${id}`;
     a.innerHTML = `
       <div class="algo-card-top">
-        <span class="algo-card-emoji">${info.emoji}</span>
-        <span class="nav-tag ${info.badgeClass}">${escapeHTML(info.badge)}</span>
+        <span class="algo-card-num">${String(num).padStart(2, '0')}</span>
+        <span class="algo-card-tag">${escapeHTML(info.badge)}</span>
       </div>
       <div class="algo-card-title">${escapeHTML(info.title)}</div>
       <div class="algo-card-sub">${escapeHTML(info.sub.replace(/^—\s*/, ''))}</div>
@@ -241,7 +242,7 @@ function showView(view) {
   $('topbar-sub').textContent   = info ? info.sub : '— Pick an algorithm to explore';
   const badge = $('topbar-badge');
   badge.hidden = !info;
-  if (info) { badge.textContent = info.badge; badge.className = `topbar-badge ${info.badgeClass}`; }
+  if (info) badge.textContent = info.badge;
   $('info-btn').hidden = !info;
   document.title = info ? `${info.title} · AlgoVision` : 'AlgoVision — DAA Interactive Dashboard';
 
@@ -253,7 +254,6 @@ function showView(view) {
 /* ── Theme ───────────────────────────────────────────────────────────── */
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
-  $('theme-btn').textContent = theme === 'dark' ? '☀️' : '🌙';
   $('theme-btn').setAttribute('aria-label', theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
   VIEWS[currentView]?.redraw?.();
 }
@@ -291,37 +291,36 @@ function openInfoModal(view) {
 
   const appsHTML = d.realWorld.map(a => `
     <div class="info-app-item">
-      <div class="icon">${a.icon}</div>
       <div class="text"><strong>${a.name}</strong><span>${a.desc}</span></div>
     </div>`).join('');
 
-  $('modal-title').textContent = `${algo.emoji}  ${algo.title}`;
+  $('modal-title').textContent = algo.title;
   $('modal-body').innerHTML = `
     <div class="info-section">
-      <div class="info-section-title">📖 Definition</div>
+      <div class="info-section-title">Definition</div>
       <p>${d.definition}</p>
     </div>
     <div class="info-section">
-      <div class="info-section-title">🧠 Algorithm Paradigm</div>
+      <div class="info-section-title">Algorithm Paradigm</div>
       <div class="info-highlight">${d.paradigm}</div>
     </div>
     <div class="info-section">
-      <div class="info-section-title">🔢 Step-by-Step Algorithm</div>
+      <div class="info-section-title">Step-by-Step Algorithm</div>
       ${stepsHTML}
     </div>
     <div class="info-section">
-      <div class="info-section-title">⏱ Complexity</div>
+      <div class="info-section-title">Complexity</div>
       <div class="info-complexity">
         <div class="info-complexity-box"><div class="label">Time Complexity</div><div class="value">${d.complexity.time}</div></div>
         <div class="info-complexity-box"><div class="label">Space Complexity</div><div class="value">${d.complexity.space}</div></div>
       </div>
     </div>
     <div class="info-section">
-      <div class="info-section-title">🌍 Real-World Applications</div>
+      <div class="info-section-title">Real-World Applications</div>
       <div class="info-app-grid">${appsHTML}</div>
     </div>
     <div class="info-section">
-      <div class="info-section-title">🔬 How This Project Uses It</div>
+      <div class="info-section-title">How This Project Uses It</div>
       <div class="info-highlight">${d.projectContext}</div>
     </div>`;
 

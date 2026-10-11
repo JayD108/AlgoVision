@@ -45,9 +45,9 @@
 
   function finish(winner, line) {
     over = true;
-    if (winner === human) { score.win++; showBanner('ttt-banner', '🎉 You won! (That should not be possible against perfect play…)', 'success'); }
-    else if (winner === ai) { score.loss++; showBanner('ttt-banner', '🤖 The AI wins. Minimax never misses a forced win.', 'error'); }
-    else { score.draw++; showBanner('ttt-banner', '🤝 Draw — the best possible result against perfect play.', 'info'); }
+    if (winner === human) { score.win++; showBanner('ttt-banner', 'You won! (That should not be possible against perfect play…)', 'success'); }
+    else if (winner === ai) { score.loss++; showBanner('ttt-banner', 'The AI wins. Minimax never misses a forced win.', 'error'); }
+    else { score.draw++; showBanner('ttt-banner', 'Draw — the best possible result against perfect play.', 'info'); }
     storageSet('algovision-ttt', JSON.stringify(score));
     render(line);
   }
@@ -69,7 +69,7 @@
     } catch (e) {
       busy = false;
       $('ttt-status').textContent = 'Error — start a new game.';
-      showBanner('ttt-banner', '❌ ' + escapeHTML(e.message), 'error');
+      showBanner('ttt-banner', '' + escapeHTML(e.message), 'error');
       render();
     }
   }

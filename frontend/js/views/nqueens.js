@@ -52,15 +52,15 @@
         $('nq-total').textContent = solutions.length.toLocaleString();
         if (solutions.length) {
           showSolution(0);
-          showBanner('nq-banner', `✅ Found <strong>${solutions.length.toLocaleString()}</strong> solutions for N=${n}. Use ← → keys or the buttons to browse.`, 'success');
+          showBanner('nq-banner', `Found <strong>${solutions.length.toLocaleString()}</strong> solutions for N=${n}. Use ← → keys or the buttons to browse.`, 'success');
         } else {
           renderBoard(null, n);
           $('nq-viewing').textContent = 'None';
           $('nq-placement').textContent = '—';
-          showBanner('nq-banner', `❌ No solutions exist for N=${n}.`, 'error');
+          showBanner('nq-banner', `No solutions exist for N=${n}.`, 'error');
         }
       } catch (e) {
-        showBanner('nq-banner', '❌ ' + escapeHTML(e.message), 'error');
+        showBanner('nq-banner', '' + escapeHTML(e.message), 'error');
       }
     });
   }
@@ -75,14 +75,14 @@
       const d = await postJSON('/api/nqueens/verify', { placement, n });
       if (d.valid) {
         renderBoard(placement, n);
-        showBanner('nq-banner', '✅ Valid placement! All queens are safe.', 'success');
+        showBanner('nq-banner', 'Valid placement! All queens are safe.', 'success');
       } else {
         // Draw the board when it is the right shape so the conflict is visible.
         if (placement.length === n && placement.every(c => c >= 0 && c < n)) renderBoard(placement, n, d.conflict);
-        showBanner('nq-banner', `❌ Invalid: ${escapeHTML(d.reason)}`, 'error');
+        showBanner('nq-banner', `Invalid: ${escapeHTML(d.reason)}`, 'error');
       }
     } catch (e) {
-      showBanner('nq-banner', '❌ ' + escapeHTML(e.message), 'error');
+      showBanner('nq-banner', '' + escapeHTML(e.message), 'error');
     }
   }
 
