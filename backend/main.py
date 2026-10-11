@@ -85,7 +85,7 @@ def _run(fn, *args):
     try:
         return fn(*args)
     except ValueError as e:
-        raise HTTPException(400, str(e))
+        raise HTTPException(400, str(e)) from e
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
 

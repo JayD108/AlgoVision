@@ -801,3 +801,41 @@ input:focus, textarea:focus, select:focus {
   .topbar-sub { display: none; }
   .info-app-grid, .info-complexity { grid-template-columns: 1fr; }
 }
+
+/* ── Table cell variants (set from JS via className) ──────────────────── */
+.data-table td.code-cell  { color: var(--cyan); }
+.data-table td.muted-cell { color: var(--text3); font-style: italic; }
+.data-table td.pos-cell   { color: var(--green); }
+.data-table td.neg-cell   { color: var(--red); }
+.data-table td.amber-cell { color: var(--amber); font-weight: 700; }
+.data-table td.strong     { font-weight: 700; }
+
+/* ── Toasts ──────────────────────────────────────────────────────────── */
+#toast-root {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: min(380px, calc(100vw - 40px));
+}
+.toast {
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  line-height: 1.5;
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  border-left: 4px solid var(--accent);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  animation: toastIn 0.25s ease;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.toast-error   { border-left-color: var(--red); }
+.toast-success { border-left-color: var(--green); }
+.toast-info    { border-left-color: var(--accent); }
+.toast-out     { opacity: 0; transform: translateX(20px); }
+@keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }

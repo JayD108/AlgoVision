@@ -50,7 +50,7 @@ The platform classifies problems into common algorithmic paradigms:
 The project includes convenient startup scripts for Windows users.
 
 ### Prerequisites
-Make sure you have **Python 3.8+** installed and added to your system PATH.
+Make sure you have **Python 3.12+** installed and added to your system PATH.
 
 ### 1. Using the Start Script
 Double-click `start.bat` or run it from a terminal:
@@ -67,6 +67,16 @@ Double-click `start.bat` or run it from a terminal:
 To cleanly shut down the backend and frontend, run the provided PowerShell script:
 ```powershell
 .\stop.ps1
+```
+
+---
+
+## 🧪 Running Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest          # algorithm correctness (brute-force cross-checks) + API validation
+ruff check .    # lint
 ```
 
 ---

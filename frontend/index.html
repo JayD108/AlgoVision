@@ -91,7 +91,7 @@
               <div class="card-title">Input</div>
               <div class="form-row">
                 <label>Text to Compress</label>
-                <textarea id="huf-text" placeholder="Type or paste any text…">the quick brown fox jumps over the lazy dog</textarea>
+                <textarea id="huf-text" maxlength="10000" placeholder="Type or paste any text…">the quick brown fox jumps over the lazy dog</textarea>
               </div>
               <div class="btn-row">
                 <button class="btn btn-primary" id="huf-compress-btn">🗜️ Compress</button>
@@ -147,7 +147,7 @@
               </div>
               <div class="form-row">
                 <label>Max Transactions K</label>
-                <input type="number" id="stock-k" value="3" min="1" max="50" style="max-width:120px;" />
+                <input type="number" id="stock-k" value="3" min="1" max="100" style="max-width:120px;" />
               </div>
               <div class="btn-row">
                 <button class="btn btn-primary" id="stock-solve-btn">📈 Find Max Profit</button>
@@ -189,7 +189,7 @@
               </div>
               <div class="form-row">
                 <label>Knapsack Capacity</label>
-                <input type="number" id="ks-capacity" value="10" min="1" max="200" style="max-width:120px;" />
+                <input type="number" id="ks-capacity" value="10" min="1" max="500" style="max-width:120px;" />
               </div>
               <div class="btn-row">
                 <button class="btn btn-primary" id="ks-solve-btn">🎒 Solve Knapsack</button>
@@ -233,7 +233,7 @@
       <!-- ══ VIEW: TSP ══ -->
       <div id="view-tsp" class="view fade-in" style="display:none;">
         <div class="card" style="padding-bottom:14px;">
-          <div class="card-title">Place Cities by Clicking · OR type coordinates below · Max 15</div>
+          <div class="card-title">Place Cities by Clicking · OR type coordinates below · Max 30 (exact up to 15)</div>
           <canvas id="tsp-canvas"></canvas>
 
           <div style="margin-top:12px;padding:14px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border2);">
@@ -245,7 +245,7 @@
           </div>
 
           <div class="btn-row">
-            <button class="btn btn-primary" id="tsp-solve-btn">🗺️ Solve TSP (Held-Karp)</button>
+            <button class="btn btn-primary" id="tsp-solve-btn">🗺️ Solve TSP</button>
             <button class="btn btn-ghost"   id="tsp-clear-btn">🗑️ Clear All Cities</button>
           </div>
         </div>
