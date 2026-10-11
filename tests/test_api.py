@@ -56,3 +56,13 @@ def test_oversized_body_rejected():
     payload = b'{"text":"' + b"a" * (main.MAX_BODY_BYTES + 1) + b'"}'
     r = client.post("/api/huffman", content=payload, headers={"content-type": "application/json"})
     assert r.status_code == 413
+
+
+def test_cors_preflight_allows_post():
+    r = client.options("/api/hanoi", headers={
+        "Origin": "https://example.com",
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "content-type",
+    })
+    assert r.status_code == 200
+    assert "POST" in r.headers["access-control-allow-methods"]

@@ -100,14 +100,13 @@ You need a hosting provider that supports Python apps. Great free/cheap options 
 ### Part 2: Preparing the Frontend
 Before deploying the frontend, you must tell it to talk to your *newly deployed backend* instead of your local machine.
 
-Open `frontend/app.js` and change the very first line:
+Open `frontend/app.js` and set `PROD_API` to your deployed backend URL (no trailing slash):
 ```javascript
-// Change this:
-const API = 'http://localhost:8080';
-
-// To your deployed backend URL (NO trailing slash):
-const API = 'https://algovision-api.onrender.com';
+const PROD_API = 'https://algovision-api.onrender.com';
 ```
+When the page is opened from `localhost`, the frontend automatically uses `http://localhost:8080` instead, so local development needs no edits.
+
+**Optional – restrict CORS:** on Render, set the environment variable `ALLOWED_ORIGINS` to your frontend URL (e.g. `https://algovision.vercel.app`). Multiple origins are comma-separated. If unset, all origins are allowed.
 
 ### Part 3: Deploying the Frontend
 The frontend requires only static hosting (HTML/CSS/JS). Great free options are **Vercel**, **Netlify**, or **GitHub Pages**.

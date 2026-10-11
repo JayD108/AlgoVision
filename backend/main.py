@@ -26,11 +26,15 @@ MAX_BODY_BYTES = 64 * 1024
 
 app = FastAPI(title="DAA Interactive Dashboard", version=VERSION)
 
+# Comma-separated list, e.g. "https://algovision.vercel.app,http://localhost:5500".
+# Defaults to "*" so an unconfigured deployment keeps working.
+ALLOWED_ORIGINS = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "*").split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
 
 
