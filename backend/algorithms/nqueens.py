@@ -1,26 +1,37 @@
 """
 nqueens.py — Backtracking: N-Queens Problem Solver
 """
-from typing import List
+from functools import lru_cache
+from typing import List, Tuple
+
+MAX_N = 12
 
 
-def _is_safe(placement: List[int], row: int, col: int) -> bool:
-    for r, c in enumerate(placement):
-        if c == col or abs(c - col) == abs(r - row):
-            return False
-    return True
+@lru_cache(maxsize=None)
+def _all_solutions(n: int) -> Tuple[Tuple[int, ...], ...]:
+    """
+    Bitmask backtracking. Each set bit in cols/d1/d2 marks a column or diagonal
+    already attacked, so finding safe squares is O(1) instead of O(row).
+    Solutions come out in the same lexicographic order as the naive version.
+    Results are cached: there are only MAX_N possible inputs.
+    """
+    full = (1 << n) - 1
+    placement = [0] * n
+    solutions: List[Tuple[int, ...]] = []
 
+    def backtrack(row: int, cols: int, d1: int, d2: int):
+        if row == n:
+            solutions.append(tuple(placement))
+            return
+        free = full & ~(cols | d1 | d2)
+        while free:
+            bit = free & -free          # lowest free column
+            free ^= bit
+            placement[row] = bit.bit_length() - 1
+            backtrack(row + 1, cols | bit, ((d1 | bit) << 1) & full, (d2 | bit) >> 1)
 
-def _backtrack(placement: List[int], n: int, solutions: List[List[int]]):
-    row = len(placement)
-    if row == n:
-        solutions.append(placement[:])
-        return
-    for col in range(n):
-        if _is_safe(placement, row, col):
-            placement.append(col)
-            _backtrack(placement, n, solutions)
-            placement.pop()
+    backtrack(0, 0, 0, 0)
+    return tuple(solutions)
 
 
 def to_board(solution: List[int], n: int) -> List[List[str]]:
@@ -28,14 +39,10 @@ def to_board(solution: List[int], n: int) -> List[List[str]]:
 
 
 def solve_nqueens(n: int) -> dict:
-    if n < 1 or n > 12:
-        raise ValueError("N must be between 1 and 12.")
-    if n == 2 or n == 3:
-        return {"n": n, "total_solutions": 0, "solutions": [], "boards": []}
+    if n < 1 or n > MAX_N:
+        raise ValueError(f"N must be between 1 and {MAX_N}.")
 
-    solutions: List[List[int]] = []
-    _backtrack([], n, solutions)
-
+    solutions = [list(s) for s in _all_solutions(n)]
     return {
         "n": n,
         "total_solutions": len(solutions),
@@ -55,5 +62,6 @@ def verify_placement(placement: List[int], n: int) -> dict:
         for r2 in range(r + 1, n):
             c, c2 = placement[r], placement[r2]
             if c == c2 or abs(c - c2) == abs(r - r2):
-                return {"valid": False, "reason": f"Queens at row {r},col {c} and row {r2},col {c2} attack each other."}
+                return {"valid": False, "reason": f"Queens at row {r},col {c} and row {r2},col {c2} attack each other.",
+                        "conflict": [[r, c], [r2, c2]]}
     return {"valid": True, "reason": "Valid solution!", "board": to_board(placement, n)}
