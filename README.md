@@ -135,3 +135,11 @@ To add a new algorithm:
 2. Add a Pydantic request model with sensible limits and a route in `backend/main.py`.
 3. Add its metadata to `ALGO_INFO` (`js/info.js`), an entry to `NAV` and any limits to `LIMITS` (`js/core.js`).
 4. Add a `<section id="view-<id>" class="view" hidden>` to `index.html` and a `js/views/<id>.js` that calls `registerView('<id>', { run, redraw, onShow })`.
+
+## Author
+
+Mrittunjay Dubey, GitHub [@JayD108](https://github.com/JayD108)
+
+## License
+
+No license file is included yet, so all rights are reserved by default.
